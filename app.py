@@ -7,7 +7,43 @@ from streamlit_gsheets import GSheetsConnection
 st.set_page_config(
     page_title="Match Attax 25/26 Tracker", page_icon="⚽", layout="wide"
 )
-
+st.markdown(
+    """
+    <style>
+    /* Ensure columns have equal height and flex alignment */
+    [data-testid="column"] {
+        display: flex;
+        flex-direction: column;
+        justify-content: stretch;
+    }
+    
+    /* Category card styling */
+    .category-card {
+        background-color: var(--secondary-background-color);
+        border: 1px solid rgba(128, 128, 128, 0.2);
+        border-radius: 10px;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+        box-sizing: border-box;
+    }
+    
+    .category-title {
+        font-weight: bold;
+        font-size: 1.1rem;
+        min-height: 2.8em; /* Reserve consistent vertical space for up to 2 lines of text */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 PASSCODE = st.secrets["passcode"]
 SHEET_URL = st.secrets["sheet_url"]
