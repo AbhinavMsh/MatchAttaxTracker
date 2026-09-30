@@ -10,36 +10,43 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    /* Ensure columns have equal height and flex alignment */
+    /* 1. Force Streamlit columns to stretch full height */
     [data-testid="column"] {
         display: flex;
         flex-direction: column;
         justify-content: stretch;
     }
-    
-    /* Category card styling */
-    .category-card {
+
+    /* 2. Set a strict fixed height for the card container */
+    .fixed-height-card {
         background-color: var(--secondary-background-color);
         border: 1px solid rgba(128, 128, 128, 0.2);
         border-radius: 10px;
         padding: 15px;
+        height: 380px; /* <-- Adjust this fixed pixel height as needed */
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
-        height: 100%;
+        justify-content: space-between; /* Pushes content/button to top and bottom evenly */
         box-sizing: border-box;
+        overflow: hidden;
     }
-    
-    .category-title {
+
+    /* 3. Give category titles a fixed vertical zone (e.g., 2 lines max) */
+    .fixed-title {
         font-weight: bold;
-        font-size: 1.1rem;
-        min-height: 2.8em; /* Reserve consistent vertical space for up to 2 lines of text */
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        font-size: 1.05rem;
+        height: 2.6em; 
+        line-height: 1.3em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
         text-align: center;
-        margin-bottom: 10px;
+        margin-bottom: 5px;
     }
+
+   
     </style>
     """,
     unsafe_allow_html=True,
