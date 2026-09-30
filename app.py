@@ -8,51 +8,82 @@ st.set_page_config(
     page_title="Match Attax 25/26 Tracker", page_icon="⚽", layout="wide"
 )
 
-
 PASSCODE = st.secrets["passcode"]
 SHEET_URL = st.secrets["sheet_url"]
 EXCEL_FILE = "match_attax_checklist.xlsx"
 
-# Initialize Google Sheets Connection for reading
+# Initialize Google Sheets Connection
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 
-# Load Data: Local file first, fallback to Google Sheet connection
+# 1. Load Local Excel Data
 @st.cache_data(ttl=10)
-def load_data():
+def load_local_data():
   file_path = Path(EXCEL_FILE)
-  df = pd.DataFrame()
-
   if file_path.is_file():
     try:
       df = pd.read_excel(file_path)
+      return clean_dataframe(df)
     except Exception:
       pass
+  return pd.DataFrame()
 
-  if df.empty:
-    try:
-      df = conn.read(spreadsheet=SHEET_URL, ttl=5)
-    except Exception as e:
-      st.error(f"Error loading Google Sheet: {e}")
-      return pd.DataFrame()
 
+# 2. Load Live Google Sheet Data
+@st.cache_data(ttl=10)
+def load_google_data():
+  try:
+    df = conn.read(spreadsheet=SHEET_URL, ttl=5)
+    return clean_dataframe(df)
+  except Exception as e:
+    st.error(f"Error loading Google Sheet: {e}")
+    return pd.DataFrame()
+
+
+# Helper to normalize columns and data types
+def clean_dataframe(df):
   if df.empty:
     return pd.DataFrame()
 
   if "owned" not in df.columns:
     df["owned"] = False
   else:
-    df["owned"] = df["owned"].fillna(False).astype(bool)
+    df["owned"] = (
+        df["owned"]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+        .isin(["true", "1", "t", "yes"])
+    )
 
   if "duplicates" not in df.columns:
     df["duplicates"] = 0
   else:
-    df["duplicates"] = df["duplicates"].fillna(0).astype(int)
+    df["duplicates"] = (
+        pd.to_numeric(df["duplicates"], errors="coerce").fillna(0).astype(int)
+    )
+
+  if "card_number" in df.columns:
+    df["card_number"] = df["card_number"].astype(str).str.strip()
 
   return df
 
 
-df_master = load_data()
+# --- SIDEBAR DATA SOURCE SELECTOR ---
+st.sidebar.title("📊 Data Source")
+data_source_mode = st.sidebar.radio(
+    "Choose active dataset:",
+    ["Live Google Sheet", "Local Excel File"],
+    index=0,  # Defaults to Google Sheet
+)
+
+# Load data based on user selection
+if data_source_mode == "Live Google Sheet":
+  df_master = load_google_data()
+  st.sidebar.caption("🌐 Currently viewing and syncing with Google Sheets.")
+else:
+  df_master = load_local_data()
+  st.sidebar.caption("📂 Currently viewing local `match_attax_checklist.xlsx`.")
 
 st.title("⚽ Match Attax 25/26 Collection Tracker")
 
@@ -68,7 +99,10 @@ with tab1:
   st.subheader("Visual Card Gallery")
 
   if df_master.empty:
-    st.warning("Your collection checklist is empty.")
+    st.warning(
+        "Your collection checklist is empty for this source. Check your"
+        " connection or local file."
+    )
   else:
     show_only_owned = st.checkbox(
         "Show only collected cards", value=False, key="filter_owned"
@@ -104,7 +138,7 @@ with tab1:
 
 
 # ==========================================
-# TAB 2: CATEGORIES & TIERS (Drill-down view)
+# TAB 2: CATEGORIES & TIERS (4 Columns)
 # ==========================================
 with tab2:
   st.subheader("Card Categories & Rarity Tiers")
@@ -112,11 +146,9 @@ with tab2:
   if df_master.empty:
     st.warning("No categories available.")
   else:
-    # Initialize session state for drill-down category view if not present
     if "selected_category" not in st.session_state:
       st.session_state.selected_category = None
 
-    # VIEW A: Show grid of all categories if none is selected
     if st.session_state.selected_category is None:
       categories = df_master["rarity_tier"].dropna().unique()
       cat_cols = st.columns(5)
@@ -128,7 +160,6 @@ with tab2:
         total_cards = len(cat_df)
         owned_cards = len(cat_df[cat_df["owned"] == True])
 
-        # Find a representative image for this category
         valid_imgs = cat_df[
             cat_df["image_url"].str.startswith("http", na=False)
         ]
@@ -143,19 +174,17 @@ with tab2:
           if rep_img != "Unknown":
             st.image(rep_img, use_container_width=True)
           else:
-            st.markdown("🖼️️ *No Preview Image*")
+            st.markdown("🖼 *No Preview Image*")
 
           st.progress(
               owned_cards / total_cards if total_cards > 0 else 0,
-              text=f"Progress: {owned_cards}/{total_cards} collected",
+              text=f"Progress: {owned_cards}/{total_cards}",
           )
 
-          if st.button(f"Explore {category}", key=f"btn_{category}"):
+          if st.button(f"Explore", key=f"btn_{category}"):
             st.session_state.selected_category = category
             st.rerun()
           st.divider()
-
-    # VIEW B: Drill-down view when a specific category is clicked
     else:
       active_cat = st.session_state.selected_category
       if st.button("⬅️ Back to All Categories"):
@@ -259,17 +288,14 @@ with tab3:
             key="dup_num",
         )
 
-if st.button("Save Changes to Live Google Sheet"):
+        if st.button("Save Changes"):
           current_owned_status = bool(selected_row["owned"])
           current_dups = int(selected_row["duplicates"])
 
-          # Intelligent Duplicate Logic:
-          # If the user newly checks "owned", but they already owned it, bump duplicates up by +1!
+          # Intelligent Duplicate Increment
           if is_owned and current_owned_status:
             num_dup = current_dups + 1
-          # Otherwise, respect whatever number they manually set or cleared in the number_input
 
-          # 1. Update dataframe value in memory
           df_master.loc[
               df_master["card_number"] == selected_row["card_number"], "owned"
           ] = is_owned
@@ -278,23 +304,20 @@ if st.button("Save Changes to Live Google Sheet"):
               "duplicates",
           ] = num_dup
 
-          # 2. Clean up temporary display column
           df_to_save = df_master.drop(columns=["display_label"])
 
           try:
-            # 3. Write changes back to the live Google Sheet via Apps Script or connection
-            conn.update(spreadsheet=SHEET_URL, data=df_to_save)
-            df_to_save.to_excel(EXCEL_FILE, index=False)
-            st.cache_data.clear()
-
-            if is_owned and current_owned_status:
-              st.success(
-                  f"You already owned this card! Duplicate count increased to"
-                  f" {num_dup} and synced successfully."
-              )
+            # Save to whichever source is currently active
+            if data_source_mode == "Live Google Sheet":
+              # Note: If writing live via streamlit-gsheets requires a service account,
+              # you can use your Apps Script bridge here if preferred, or direct update:
+              conn.update(spreadsheet=SHEET_URL, data=df_to_save)
+              st.success("Successfully updated live Google Sheet!")
             else:
-              st.success("Successfully updated and synced to your Google Sheet!")
+              df_to_save.to_excel(EXCEL_FILE, index=False)
+              st.success("Successfully updated local Excel file!")
 
+            st.cache_data.clear()
             st.rerun()
           except Exception as e:
-            st.error(f"Failed to update sheet: {e}")
+            st.error(f"Failed to update dataset: {e}")
