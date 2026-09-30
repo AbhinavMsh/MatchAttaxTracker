@@ -17,21 +17,22 @@ st.markdown(
         justify-content: stretch;
     }
 
-    /* 2. Set a strict fixed height for the card container */
+    /* 2. Set a strict fixed height and row margin for the card container */
     .fixed-height-card {
         background-color: var(--secondary-background-color);
         border: 1px solid rgba(128, 128, 128, 0.2);
         border-radius: 10px;
         padding: 15px;
-        height: 380px; /* <-- Adjust this fixed pixel height as needed */
+        height: 380px; /* Fixed height for consistency */
+        margin-bottom: 20px; /* Fixed vertical gap between rows */
         display: flex;
         flex-direction: column;
-        justify-content: space-between; /* Pushes content/button to top and bottom evenly */
+        justify-content: space-between; /* Spreads internal content evenly */
         box-sizing: border-box;
         overflow: hidden;
     }
 
-    /* 3. Give category titles a fixed vertical zone (e.g., 2 lines max) */
+    /* 3. Give category titles a fixed vertical zone (2 lines max) */
     .fixed-title {
         font-weight: bold;
         font-size: 1.05rem;
@@ -46,7 +47,12 @@ st.markdown(
         margin-bottom: 5px;
     }
 
-   
+    /* 4. Constrain image size inside the card container */
+    .fixed-height-card img {
+        max-height: 120px !important;
+        object-fit: contain;
+        margin: auto;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -221,21 +227,36 @@ with tab2:
         )
 
         with cat_cols[col_idx]:
-          st.markdown(f"### {category}")
+          # Open the unified fixed-height card container
+          st.markdown(
+              '<div class="fixed-height-card">', unsafe_allow_html=True
+          )
+
+          # Category Name Block
+          st.markdown(
+              f'<div class="fixed-title" title="{category}">{category}</div>',
+              unsafe_allow_html=True,
+          )
+
+          # Image Block
           if rep_img != "Unknown":
             st.image(rep_img, use_container_width=True)
           else:
             st.markdown("🖼 *No Preview Image*")
 
+          # Progress Bar & Metrics
           st.progress(
               owned_cards / total_cards if total_cards > 0 else 0,
               text=f"Progress: {owned_cards}/{total_cards}",
           )
 
+          # Action Button
           if st.button(f"Explore", key=f"btn_{category}"):
             st.session_state.selected_category = category
             st.rerun()
-          st.divider()
+
+          # Close the fixed-height card container
+          st.markdown("</div>", unsafe_allow_html=True)
     else:
       active_cat = st.session_state.selected_category
       if st.button("⬅️ Back to All Categories"):
