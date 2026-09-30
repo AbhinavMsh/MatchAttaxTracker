@@ -128,7 +128,7 @@ with tab1:
             st.markdown("🖼️ *No Image Available*")
 
           st.markdown(f"**{row['player_name']}**")
-          st.caption(f"ID: `{row['card_number']}` | Tier: {row['rarity_tier']}")
+          st.caption(f"ID: `{row['card_number']}`")
 
           if row["owned"]:
             st.success("Collected ✓")
