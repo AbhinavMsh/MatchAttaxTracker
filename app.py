@@ -118,7 +118,7 @@ with tab2:
     # VIEW A: Show grid of all categories if none is selected
     if st.session_state.selected_category is None:
       categories = df_master["rarity_tier"].dropna().unique()
-      cat_cols = st.columns(3)
+      cat_cols = st.columns(5)
 
       for idx, category in enumerate(categories):
         col_idx = idx % 3
