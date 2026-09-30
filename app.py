@@ -168,13 +168,6 @@ with tab1:
           st.markdown(f"**{row['player_name']}**")
           st.caption(f"ID: `{row['card_number']}`")
 
-          if row["owned"]:
-            st.success("Collected ✓")
-          else:
-            st.error("Missing ❌")
-          st.divider()
-
-
 # ==========================================
 # TAB 2: CATEGORIES & TIERS (4 Columns)
 # ==========================================
