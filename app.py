@@ -17,7 +17,7 @@ st.markdown(
         justify-content: stretch;
     }
 
-    /* 2. Give category titles a fixed vertical zone (2 lines max) */
+    /* 2. Give category/card titles a fixed vertical zone (2 lines max) */
     .fixed-title {
         font-weight: bold;
         font-size: 1.05rem;
@@ -32,7 +32,30 @@ st.markdown(
         margin-bottom: 5px;
     }
 
-    /* 3. STOP THE JITTER: Reserve permanent scrollbar space so width never shifts */
+    /* 3. Player name formatting for Tab 1 gallery */
+    .card-player-name {
+        font-weight: bold;
+        font-size: 0.95rem;
+        height: 2.6em;
+        line-height: 1.3em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        text-align: center;
+        margin-top: 5px;
+    }
+
+    /* 4. Card metadata styling */
+    .card-meta {
+        font-size: 0.85rem;
+        color: gray;
+        text-align: center;
+        margin-bottom: 5px;
+    }
+
+    /* 5. STOP THE JITTER: Reserve permanent scrollbar space so width never shifts */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         scrollbar-gutter: stable;
     }
@@ -151,31 +174,32 @@ with tab1:
       num_cols = 5
       cols = st.columns(num_cols)
 
-      for index, row in display_df.iterrows():
+      for index, row in display_df.reset_index().iterrows():
         col_idx = index % num_cols
         with cols[col_idx]:
-          # Open rigid HTML card wrapper
-          st.markdown('<div class="match-card-box">', unsafe_allow_html=True)
+          # Use fixed-height container with height=400 and border
+          with st.container(height=400, border=True):
+            img_url = row.get("image_url")
+            if pd.notna(img_url) and str(img_url).startswith("http"):
+              st.image(img_url, use_container_width=True)
+            else:
+              st.markdown("🖼️ *No Image Available*")
 
-          img_url = row.get("image_url")
-          if pd.notna(img_url) and str(img_url).startswith("http"):
-            st.image(img_url, use_container_width=True)
-          else:
-            st.markdown("🖼️ *No Image Available*")
+            # Safe truncated player name
+            p_name = row["player_name"]
+            st.markdown(
+                f'<div class="card-player-name" title="{p_name}">{p_name}</div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f'<div class="card-meta">ID: {row["card_number"]}</div>',
+                unsafe_allow_html=True,
+            )
 
-          # Safe truncated player name
-          p_name = row["player_name"]
+          # Fixed row margin spacing under each row container
           st.markdown(
-              f'<div class="card-player-name" title="{p_name}">{p_name}</div>',
-              unsafe_allow_html=True,
+              '<div style="margin-bottom: 20px;"></div>', unsafe_allow_html=True
           )
-          st.markdown(
-              f'<div class="card-meta">ID: {row["card_number"]}</div>',
-              unsafe_allow_html=True,
-          )
-
-          # Close rigid HTML card wrapper
-          st.markdown("</div>", unsafe_allow_html=True)
 
 # ==========================================
 # TAB 2: CATEGORIES & TIERS
@@ -210,7 +234,7 @@ with tab2:
         )
 
         with cat_cols[col_idx]:
-          # Use Streamlit's native fixed-height container with border
+          # Use fixed-height container with height=400 and border
           with st.container(height=400, border=True):
             # Category Name Block
             st.markdown(
@@ -255,7 +279,7 @@ with tab2:
       for index, row in sub_df.reset_index().iterrows():
         col_idx = index % num_cols
         with cols[col_idx]:
-          with st.container(border=True):
+          with st.container(height=400, border=True):
             img_url = row.get("image_url")
             if pd.notna(img_url) and str(img_url).startswith("http"):
               st.image(img_url, use_container_width=True)
@@ -276,6 +300,10 @@ with tab2:
               st.success("Collected ✓")
             else:
               st.error("Missing ❌")
+
+          st.markdown(
+              '<div style="margin-bottom: 20px;"></div>', unsafe_allow_html=True
+          )
 
 # ==========================================
 # TAB 3: SECURE CARD ENTRY PORTAL
