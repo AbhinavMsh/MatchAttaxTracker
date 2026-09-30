@@ -18,7 +18,8 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 @st.cache_data(ttl=10)
 def load_data():
   try:
-    df = conn.read(spreadsheet=SHEET_URL, usecols=list(range(6)), ttl=5)
+    # Read without strict usecols restrictions so it adapts to your sheet columns automatically
+    df = conn.read(spreadsheet=SHEET_URL, ttl=5)
     if df.empty:
       return pd.DataFrame()
 
