@@ -121,7 +121,7 @@ with tab2:
       cat_cols = st.columns(5)
 
       for idx, category in enumerate(categories):
-        col_idx = idx % 3
+        col_idx = idx % 5
         cat_df = df_master[df_master["rarity_tier"] == category]
 
         total_cards = len(cat_df)
