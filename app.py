@@ -211,7 +211,7 @@ with tab2:
 
         with cat_cols[col_idx]:
           # Use Streamlit's native fixed-height container with border
-          with st.container(height=390, border=True):
+          with st.container(height=400, border=True):
             # Category Name Block
             st.markdown(
                 f'<div class="fixed-title" title="{category}">{category}</div>',
