@@ -7,26 +7,7 @@ from streamlit_gsheets import GSheetsConnection
 st.set_page_config(
     page_title="Match Attax 25/26 Tracker", page_icon="⚽", layout="wide"
 )
-# Custom CSS to force clean grid alignment and equal card heights
-st.markdown(
-    """
-    <style>
-    /* Ensure all columns stretch equally and align neatly */
-    div.stHorizontalBlock {
-        align-items: stretch;
-    }
-    /* Optional: give cards a subtle card-like border/box feel */
-    div[data-testid="column"] {
-        background-color: #f9f9f9;
-        padding: 15px;
-        border-radius: 10px;
-        border: 1px solid #e0e0e0;
-        margin-bottom: 10px;
-    }
-    </style>
-""",
-    unsafe_allow_html=True,
-)
+
 
 PASSCODE = st.secrets["passcode"]
 SHEET_URL = st.secrets["sheet_url"]
@@ -100,7 +81,7 @@ with tab1:
     if display_df.empty:
       st.info("No cards match your filter criteria.")
     else:
-      num_cols = 4
+      num_cols = 5
       cols = st.columns(num_cols)
 
       for index, row in display_df.iterrows():
