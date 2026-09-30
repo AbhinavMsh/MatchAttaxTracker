@@ -9,37 +9,40 @@ st.set_page_config(
 # Fetch secrets from Streamlit secrets.toml
 PASSCODE = st.secrets["passcode"]
 SHEET_URL = st.secrets["sheet_url"]
+EXCEL_FILE = "match_attax_checklist.xlsx"
 
 
-# Load Data directly from Google Sheets URL
+# Load Data: Tries loading local file first, then falls back to Google Drive link
 @st.cache_data(ttl=60)
-def load_data_from_gsheets():
-  try:
-    # Extract the Sheet/File ID cleanly from your URL
-    file_id = SHEET_URL.split("/d/")[1].split("/")[0]
-    
-    # Use Google's direct download export endpoint for Excel files (.xlsx)
-    excel_url = f"https://docs.google.com/spreadsheets/d/{file_id}/export?format=xlsx"
+def load_data():
+  file_path = Path(EXCEL_FILE)
 
-    # Read directly using pandas Excel engine
-    df = pd.read_excel(excel_url)
+  # 1. If local file exists (great for local running), use it
+  if file_path.is_file():
+    df = pd.read_excel(file_path)
+  else:
+    # 2. Otherwise, load directly from your public Google Drive/Sheet Excel link
+    try:
+      file_id = SHEET_URL.split("/d/")[1].split("/")[0]
+      excel_url = (
+          f"https://docs.google.com/spreadsheets/d/{file_id}/export?format=xlsx"
+      )
+      df = pd.read_excel(excel_url)
+    except Exception as e:
+      st.error(f"Could not load master checklist. Error: {e}")
+      df = pd.DataFrame()
 
-    if df.empty:
-      return pd.DataFrame()
-
-    # Ensure tracking columns exist
+  # Ensure tracking columns exist
+  if not df.empty:
     if "owned" not in df.columns:
       df["owned"] = False
     if "duplicates" not in df.columns:
       df["duplicates"] = 0
-    return df
-  except Exception as e:
-    st.error(
-        f"Error loading Excel file from Google Drive. Make sure sharing is set to 'Anyone with the link can view'. Details: {e}"
-    )
-    return pd.DataFrame()
 
-df_master = load_data_from_gsheets()
+  return df
+
+
+df_master = load_data()
 
 st.title("⚽ Match Attax 25/26 Collection Tracker")
 
@@ -53,10 +56,7 @@ with tab1:
   st.subheader("Visual Card Gallery")
 
   if df_master.empty:
-    st.warning(
-        "Your Google Sheet appears to be empty or inaccessible. Please populate"
-        " it with your scraped data."
-    )
+    st.warning("Your collection checklist is empty.")
   else:
     show_only_owned = st.checkbox(
         "Show only collected cards", value=False, key="filter_owned"
@@ -75,7 +75,7 @@ with tab1:
       for index, row in display_df.iterrows():
         col_idx = index % num_cols
         with cols[col_idx]:
-          # Render image safely using updated container width parameter
+          # Render image safely
           img_url = row.get("image_url")
           if pd.notna(img_url) and str(img_url).startswith("http"):
             st.image(img_url, use_container_width=True)
@@ -164,15 +164,8 @@ with tab2:
             key="dup_num",
         )
 
-        st.info(
-            "Note: Since your Google Sheet is read via URL for fast loading,"
-            " updates made here are saved to your local/session state view."
-            " Paste your exported master dataset directly into your Google"
-            " Sheet to sync permanently across devices!"
-        )
-
-        if st.button("Update Local View"):
-          # Update dataframe value in memory
+        if st.button("Save Changes"):
+          # 1. Update dataframe value in memory
           df_master.loc[
               df_master["card_number"] == selected_row["card_number"], "owned"
           ] = is_owned
@@ -181,7 +174,16 @@ with tab2:
               "duplicates",
           ] = num_dup
 
-          # Clear cache so data updates immediately
+          # 2. Save locally (for local execution)
+          df_to_save = df_master.drop(columns=["display_label"])
+          df_to_save.to_excel(EXCEL_FILE, index=False)
+
+          # 3. Clear cache so the app re-fetches/refreshes instantly
           st.cache_data.clear()
-          st.success("Successfully updated tracker view!")
+
+          st.success(
+              "Successfully updated your collection! (Changes saved locally."
+              " To sync permanently to your cloud file, re-upload the updated"
+              " Excel file to your Google Drive link)."
+          )
           st.rerun()
