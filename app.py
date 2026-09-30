@@ -227,36 +227,36 @@ with tab2:
         )
 
         with cat_cols[col_idx]:
-          # Open the unified fixed-height card container
+          # Use Streamlit's native fixed-height container with border
+          with st.container(height=390, border=True):
+            # Category Name Block
+            st.markdown(
+                f'<div class="fixed-title" title="{category}">{category}</div>',
+                unsafe_allow_html=True,
+            )
+
+            # Image Block
+            if rep_img != "Unknown":
+              st.image(rep_img, use_container_width=True)
+            else:
+              st.markdown("🖼 *No Preview Image*")
+
+            # Progress Bar & Metrics
+            st.progress(
+                owned_cards / total_cards if total_cards > 0 else 0,
+                text=f"Progress: {owned_cards}/{total_cards}",
+            )
+
+            # Action Button
+            if st.button(f"Explore", key=f"btn_{category}"):
+              st.session_state.selected_category = category
+              st.rerun()
+
+          # Adds a fixed vertical spacing margin under each row container
           st.markdown(
-              '<div class="fixed-height-card">', unsafe_allow_html=True
+              '<div style="margin-bottom: 20px;"></div>', unsafe_allow_html=True
           )
 
-          # Category Name Block
-          st.markdown(
-              f'<div class="fixed-title" title="{category}">{category}</div>',
-              unsafe_allow_html=True,
-          )
-
-          # Image Block
-          if rep_img != "Unknown":
-            st.image(rep_img, use_container_width=True)
-          else:
-            st.markdown("🖼 *No Preview Image*")
-
-          # Progress Bar & Metrics
-          st.progress(
-              owned_cards / total_cards if total_cards > 0 else 0,
-              text=f"Progress: {owned_cards}/{total_cards}",
-          )
-
-          # Action Button
-          if st.button(f"Explore", key=f"btn_{category}"):
-            st.session_state.selected_category = category
-            st.rerun()
-
-          # Close the fixed-height card container
-          st.markdown("</div>", unsafe_allow_html=True)
     else:
       active_cat = st.session_state.selected_category
       if st.button("⬅️ Back to All Categories"):
@@ -272,33 +272,27 @@ with tab2:
       for index, row in sub_df.reset_index().iterrows():
         col_idx = index % num_cols
         with cols[col_idx]:
-          # Open rigid HTML card wrapper for category drill-down
-          st.markdown('<div class="match-card-box">', unsafe_allow_html=True)
+          with st.container(border=True):
+            img_url = row.get("image_url")
+            if pd.notna(img_url) and str(img_url).startswith("http"):
+              st.image(img_url, use_container_width=True)
+            else:
+              st.markdown("🖼️ *No Image Available*")
 
-          img_url = row.get("image_url")
-          if pd.notna(img_url) and str(img_url).startswith("http"):
-            st.image(img_url, use_container_width=True)
-          else:
-            st.markdown("🖼️ *No Image Available*")
+            p_name = row["player_name"]
+            st.markdown(
+                f'<div class="card-player-name" title="{p_name}">{p_name}</div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f'<div class="card-meta">ID: {row["card_number"]}</div>',
+                unsafe_allow_html=True,
+            )
 
-          p_name = row["player_name"]
-          st.markdown(
-              f'<div class="card-player-name" title="{p_name}">{p_name}</div>',
-              unsafe_allow_html=True,
-          )
-          st.markdown(
-              f'<div class="card-meta">ID: {row["card_number"]}</div>',
-              unsafe_allow_html=True,
-          )
-
-          if row["owned"]:
-            st.success("Collected ✓")
-          else:
-            st.error("Missing ❌")
-
-          # Close rigid HTML card wrapper
-          st.markdown("</div>", unsafe_allow_html=True)
-
+            if row["owned"]:
+              st.success("Collected ✓")
+            else:
+              st.error("Missing ❌")
 
 # ==========================================
 # TAB 3: SECURE CARD ENTRY PORTAL
