@@ -8,6 +8,44 @@ st.set_page_config(
     page_title="Match Attax 25/26 Tracker", page_icon="⚽", layout="wide"
 )
 
+# Custom CSS for clean grid alignment and uniform card heights
+st.markdown(
+    """
+    <style>
+    /* Ensure all columns stretch equally */
+    div.stHorizontalBlock {
+        align-items: stretch;
+    }
+    
+    /* Style the column wrapper to act as a uniform card box */
+    div[data-testid="column"] {
+        background-color: var(--background-color, #ffffff);
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid rgba(150, 150, 150, 0.2);
+        margin-bottom: 12px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 380px; /* Forces every card container to match height */
+    }
+
+    /* Constrain text elements so long names don't break row alignment */
+    div[data-testid="column"] p, 
+    div[data-testid="column"] div[data-testid="stMarkdownContainer"] p {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2; /* Limits player name to a maximum of 2 lines */
+        -webkit-box-orient: vertical;
+        line-height: 1.4em;
+        height: 2.8em; /* Exact height for up to 2 lines */
+    }
+    </style>
+""",
+    unsafe_allow_html=True,
+)
+
 PASSCODE = st.secrets["passcode"]
 SHEET_URL = st.secrets["sheet_url"]
 EXCEL_FILE = "match_attax_checklist.xlsx"
