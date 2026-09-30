@@ -17,22 +17,7 @@ st.markdown(
         justify-content: stretch;
     }
 
-    /* 2. Set a strict fixed height and row margin for the card container */
-    .fixed-height-card {
-        background-color: var(--secondary-background-color);
-        border: 1px solid rgba(128, 128, 128, 0.2);
-        border-radius: 10px;
-        padding: 15px;
-        height: 380px; /* Fixed height for consistency */
-        margin-bottom: 20px; /* Fixed vertical gap between rows */
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between; /* Spreads internal content evenly */
-        box-sizing: border-box;
-        overflow: hidden;
-    }
-
-    /* 3. Give category titles a fixed vertical zone (2 lines max) */
+    /* 2. Give category titles a fixed vertical zone (2 lines max) */
     .fixed-title {
         font-weight: bold;
         font-size: 1.05rem;
@@ -47,11 +32,9 @@ st.markdown(
         margin-bottom: 5px;
     }
 
-    /* 4. Constrain image size inside the card container */
-    .fixed-height-card img {
-        max-height: 120px !important;
-        object-fit: contain;
-        margin: auto;
+    /* 3. STOP THE JITTER: Reserve permanent scrollbar space so width never shifts */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        scrollbar-gutter: stable;
     }
     </style>
     """,
