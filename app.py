@@ -167,7 +167,22 @@ with tab1:
     display_df = (
         df_master[df_master["owned"] == True] if show_only_owned else df_master
     )
+      
+    # Calculate total and collected stats for the counter badge
+    total_cards_count = len(df_master)
+    collected_cards_count = len(df_master[df_master["owned"] == True])
+    displayed_cards_count = len(display_df)
 
+    if show_only_owned:
+      st.caption(
+          f"Showing **{displayed_cards_count}** collected cards out of"
+          f" **{total_cards_count}** total checklist cards."
+      )
+    else:
+      st.caption(
+          f"Showing all **{displayed_cards_count}** cards (Collected:"
+          f" **{collected_cards_count}** / **{total_cards_count}**)."
+      )
     if display_df.empty:
       st.info("No cards match your filter criteria.")
     else:
