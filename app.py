@@ -1,52 +1,48 @@
 import pandas as pd
 import streamlit as st
-from pathlib import Path
+from streamlit_gsheets import GSheetsConnection
+
 # Page Configuration
 st.set_page_config(
     page_title="Match Attax 25/26 Tracker", page_icon="⚽", layout="wide"
 )
 
-# Fetch secrets from Streamlit secrets.toml
 PASSCODE = st.secrets["passcode"]
 SHEET_URL = st.secrets["sheet_url"]
-EXCEL_FILE = "match_attax_checklist.xlsx"
+
+# Initialize Google Sheets Connection
+conn = st.connection("gsheets", type=GSheetsConnection)
 
 
-# Load Data: Tries loading local file first, then falls back to Google Drive link
-@st.cache_data(ttl=60)
+# Load Data (cached for 10 seconds so updates show up quickly)
+@st.cache_data(ttl=10)
 def load_data():
-  file_path = Path(EXCEL_FILE)
+  try:
+    df = conn.read(spreadsheet=SHEET_URL, usecols=list(range(6)), ttl=5)
+    if df.empty:
+      return pd.DataFrame()
 
-  # 1. If local file exists (great for local running), use it
-  if file_path.is_file():
-    df = pd.read_excel(file_path)
-  else:
-    # 2. Otherwise, load directly from your public Google Drive/Sheet Excel link
-    try:
-      file_id = SHEET_URL.split("/d/")[1].split("/")[0]
-      excel_url = (
-          f"https://docs.google.com/spreadsheets/d/{file_id}/export?format=xlsx"
-      )
-      df = pd.read_excel(excel_url)
-    except Exception as e:
-      st.error(f"Could not load master checklist. Error: {e}")
-      df = pd.DataFrame()
-
-  # Ensure tracking columns exist
-  if not df.empty:
+    # Ensure tracking columns exist & clean NaN values
     if "owned" not in df.columns:
       df["owned"] = False
+    else:
+      df["owned"] = df["owned"].fillna(False).astype(bool)
+
     if "duplicates" not in df.columns:
       df["duplicates"] = 0
+    else:
+      df["duplicates"] = df["duplicates"].fillna(0).astype(int)
 
-  return df
+    return df
+  except Exception as e:
+    st.error(f"Error loading Google Sheet: {e}")
+    return pd.DataFrame()
 
 
 df_master = load_data()
 
 st.title("⚽ Match Attax 25/26 Collection Tracker")
 
-# Clean Tabs for Navigation
 tab1, tab2 = st.tabs(["🏠 My Collection Gallery", "➕ Add / Update Cards"])
 
 # ==========================================
@@ -75,7 +71,6 @@ with tab1:
       for index, row in display_df.iterrows():
         col_idx = index % num_cols
         with cols[col_idx]:
-          # Render image safely
           img_url = row.get("image_url")
           if pd.notna(img_url) and str(img_url).startswith("http"):
             st.image(img_url, use_container_width=True)
@@ -124,7 +119,6 @@ with tab2:
     if df_master.empty:
       st.error("No data available to update.")
     else:
-      # Create dropdown label combining Player Name + Rarity + Card Number
       df_master["display_label"] = (
           df_master["player_name"]
           + " — "
@@ -164,7 +158,7 @@ with tab2:
             key="dup_num",
         )
 
-        if st.button("Save Changes"):
+        if st.button("Save Changes to Live Google Sheet"):
           # 1. Update dataframe value in memory
           df_master.loc[
               df_master["card_number"] == selected_row["card_number"], "owned"
@@ -174,16 +168,16 @@ with tab2:
               "duplicates",
           ] = num_dup
 
-          # 2. Save locally (for local execution)
+          # 2. Clean up temporary display column before updating spreadsheet
           df_to_save = df_master.drop(columns=["display_label"])
-          df_to_save.to_excel(EXCEL_FILE, index=False)
 
-          # 3. Clear cache so the app re-fetches/refreshes instantly
-          st.cache_data.clear()
+          try:
+            # 3. Write changes back to the public spreadsheet URL
+            conn.update(spreadsheet=SHEET_URL, data=df_to_save)
 
-          st.success(
-              "Successfully updated your collection! (Changes saved locally."
-              " To sync permanently to your cloud file, re-upload the updated"
-              " Excel file to your Google Drive link)."
-          )
-          st.rerun()
+            # 4. Clear cache so changes reflect instantly
+            st.cache_data.clear()
+            st.success("Successfully updated and synced to your Google Sheet!")
+            st.rerun()
+          except Exception as e:
+            st.error(f"Failed to update sheet: {e}")
