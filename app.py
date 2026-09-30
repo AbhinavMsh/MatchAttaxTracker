@@ -8,7 +8,7 @@ st.set_page_config(
     page_title="Match Attax 25/26 Tracker", page_icon="⚽", layout="wide"
 )
 
-# Custom CSS for clean grid alignment and uniform card heights
+# Custom CSS for clean grid alignment and uniform card containers
 st.markdown(
     """
     <style>
@@ -17,29 +17,35 @@ st.markdown(
         align-items: stretch;
     }
     
-    /* Style the column wrapper to act as a uniform card box */
-    div[data-testid="column"] {
-        background-color: var(--background-color, #ffffff);
-        padding: 15px;
-        border-radius: 12px;
+    /* Custom rigid card container box to guarantee uniform grid layout */
+    .match-card-box {
+        background-color: var(--secondary-background-color, #ffffff);
         border: 1px solid rgba(150, 150, 150, 0.2);
+        border-radius: 12px;
+        padding: 12px;
         margin-bottom: 12px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        min-height: 380px; /* Forces every card container to match height */
+        height: 400px; /* Locks every card box to an identical height */
+        box-sizing: border-box;
     }
 
-    /* Constrain text elements so long names don't break row alignment */
-    div[data-testid="column"] p, 
-    div[data-testid="column"] div[data-testid="stMarkdownContainer"] p {
+    /* Fixed-height single-line text truncation for long player names */
+    .card-player-name {
+        font-weight: 700;
+        font-size: 0.95rem;
+        white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        display: -webkit-box;
-        -webkit-line-clamp: 2; /* Limits player name to a maximum of 2 lines */
-        -webkit-box-orient: vertical;
-        line-height: 1.4em;
-        height: 2.8em; /* Exact height for up to 2 lines */
+        margin-top: 6px;
+        margin-bottom: 2px;
+    }
+    
+    .card-meta {
+        font-size: 0.8rem;
+        color: #666;
+        margin-bottom: 6px;
     }
     </style>
 """,
@@ -159,17 +165,31 @@ with tab1:
       for index, row in display_df.iterrows():
         col_idx = index % num_cols
         with cols[col_idx]:
+          # Open rigid HTML card wrapper
+          st.markdown('<div class="match-card-box">', unsafe_allow_html=True)
+
           img_url = row.get("image_url")
           if pd.notna(img_url) and str(img_url).startswith("http"):
             st.image(img_url, use_container_width=True)
           else:
             st.markdown("🖼️ *No Image Available*")
 
-          st.markdown(f"**{row['player_name']}**")
-          st.caption(f"ID: `{row['card_number']}`")
+          # Safe truncated player name
+          p_name = row["player_name"]
+          st.markdown(
+              f'<div class="card-player-name" title="{p_name}">{p_name}</div>',
+              unsafe_allow_html=True,
+          )
+          st.markdown(
+              f'<div class="card-meta">ID: `{row["card_number"]}`</div>',
+              unsafe_allow_html=True,
+          )
+
+          # Close rigid HTML card wrapper
+          st.markdown("</div>", unsafe_allow_html=True)
 
 # ==========================================
-# TAB 2: CATEGORIES & TIERS (4 Columns)
+# TAB 2: CATEGORIES & TIERS
 # ==========================================
 with tab2:
   st.subheader("Card Categories & Rarity Tiers")
@@ -231,20 +251,32 @@ with tab2:
       for index, row in sub_df.reset_index().iterrows():
         col_idx = index % num_cols
         with cols[col_idx]:
+          # Open rigid HTML card wrapper for category drill-down
+          st.markdown('<div class="match-card-box">', unsafe_allow_html=True)
+
           img_url = row.get("image_url")
           if pd.notna(img_url) and str(img_url).startswith("http"):
             st.image(img_url, use_container_width=True)
           else:
             st.markdown("🖼️ *No Image Available*")
 
-          st.markdown(f"**{row['player_name']}**")
-          st.caption(f"ID: `{row['card_number']}`")
+          p_name = row["player_name"]
+          st.markdown(
+              f'<div class="card-player-name" title="{p_name}">{p_name}</div>',
+              unsafe_allow_html=True,
+          )
+          st.markdown(
+              f'<div class="card-meta">ID: `{row["card_number"]}`</div>',
+              unsafe_allow_html=True,
+          )
 
           if row["owned"]:
             st.success("Collected ✓")
           else:
             st.error("Missing ❌")
-          st.divider()
+
+          # Close rigid HTML card wrapper
+          st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ==========================================
@@ -340,8 +372,6 @@ with tab3:
           try:
             # Save to whichever source is currently active
             if data_source_mode == "Live Google Sheet":
-              # Note: If writing live via streamlit-gsheets requires a service account,
-              # you can use your Apps Script bridge here if preferred, or direct update:
               conn.update(spreadsheet=SHEET_URL, data=df_to_save)
               st.success("Successfully updated live Google Sheet!")
             else:
