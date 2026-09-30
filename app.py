@@ -8,49 +8,6 @@ st.set_page_config(
     page_title="Match Attax 25/26 Tracker", page_icon="⚽", layout="wide"
 )
 
-# Custom CSS for clean grid alignment and uniform card containers
-st.markdown(
-    """
-    <style>
-    /* Ensure all columns stretch equally */
-    div.stHorizontalBlock {
-        align-items: stretch;
-    }
-    
-    /* Custom rigid card container box to guarantee uniform grid layout */
-    .match-card-box {
-        background-color: var(--secondary-background-color, #ffffff);
-        border: 1px solid rgba(150, 150, 150, 0.2);
-        border-radius: 12px;
-        padding: 12px;
-        margin-bottom: 12px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        height: 400px; /* Locks every card box to an identical height */
-        box-sizing: border-box;
-    }
-
-    /* Fixed-height single-line text truncation for long player names */
-    .card-player-name {
-        font-weight: 700;
-        font-size: 0.95rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        margin-top: 6px;
-        margin-bottom: 2px;
-    }
-    
-    .card-meta {
-        font-size: 0.8rem;
-        color: #666;
-        margin-bottom: 6px;
-    }
-    </style>
-""",
-    unsafe_allow_html=True,
-)
 
 PASSCODE = st.secrets["passcode"]
 SHEET_URL = st.secrets["sheet_url"]
