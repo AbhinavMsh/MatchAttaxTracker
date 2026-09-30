@@ -138,7 +138,7 @@ with tab1:
               unsafe_allow_html=True,
           )
           st.markdown(
-              f'<div class="card-meta">ID: `{row["card_number"]}`</div>',
+              f'<div class="card-meta">ID: {row["card_number"]}</div>',
               unsafe_allow_html=True,
           )
 
@@ -223,7 +223,7 @@ with tab2:
               unsafe_allow_html=True,
           )
           st.markdown(
-              f'<div class="card-meta">ID: `{row["card_number"]}`</div>',
+              f'<div class="card-meta">ID: {row["card_number"]}</div>',
               unsafe_allow_html=True,
           )
 
