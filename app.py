@@ -178,7 +178,7 @@ with tab1:
         col_idx = index % num_cols
         with cols[col_idx]:
           
-          with st.container(height=300, border=True):
+          with st.container(height=250, border=True):
             img_url = row.get("image_url")
             if pd.notna(img_url) and str(img_url).startswith("http"):
               st.image(img_url, use_container_width=True)
