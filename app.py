@@ -1,3 +1,4 @@
+from pathlib import Path
 import pandas as pd
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
@@ -9,35 +10,48 @@ st.set_page_config(
 
 PASSCODE = st.secrets["passcode"]
 SHEET_URL = st.secrets["sheet_url"]
+EXCEL_FILE = "match_attax_checklist.xlsx"
 
 # Initialize Google Sheets Connection
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 
-# Load Data (cached for 10 seconds so updates show up quickly)
+# Load Data: Local file first, fallback to Google Sheet connection
 @st.cache_data(ttl=10)
 def load_data():
-  try:
-    # Read without strict usecols restrictions so it adapts to your sheet columns automatically
-    df = conn.read(spreadsheet=SHEET_URL, ttl=5)
-    if df.empty:
+  file_path = Path(EXCEL_FILE)
+  df = pd.DataFrame()
+
+  # 1. Try loading local file first (great for local running/scraper updates)
+  if file_path.is_file():
+    try:
+      df = pd.read_excel(file_path)
+    except Exception:
+      pass
+
+  # 2. If local file doesn't exist or failed, load from live Google Sheet connection
+  if df.empty:
+    try:
+      df = conn.read(spreadsheet=SHEET_URL, ttl=5)
+    except Exception as e:
+      st.error(f"Error loading Google Sheet: {e}")
       return pd.DataFrame()
 
-    # Ensure tracking columns exist & clean NaN values
-    if "owned" not in df.columns:
-      df["owned"] = False
-    else:
-      df["owned"] = df["owned"].fillna(False).astype(bool)
-
-    if "duplicates" not in df.columns:
-      df["duplicates"] = 0
-    else:
-      df["duplicates"] = df["duplicates"].fillna(0).astype(int)
-
-    return df
-  except Exception as e:
-    st.error(f"Error loading Google Sheet: {e}")
+  if df.empty:
     return pd.DataFrame()
+
+  # Ensure tracking columns exist & clean NaN values
+  if "owned" not in df.columns:
+    df["owned"] = False
+  else:
+    df["owned"] = df["owned"].fillna(False).astype(bool)
+
+  if "duplicates" not in df.columns:
+    df["duplicates"] = 0
+  else:
+    df["duplicates"] = df["duplicates"].fillna(0).astype(int)
+
+  return df
 
 
 df_master = load_data()
@@ -169,14 +183,17 @@ with tab2:
               "duplicates",
           ] = num_dup
 
-          # 2. Clean up temporary display column before updating spreadsheet
+          # 2. Clean up temporary display column before saving
           df_to_save = df_master.drop(columns=["display_label"])
 
           try:
-            # 3. Write changes back to the public spreadsheet URL
+            # 3. Write changes back to the live Google Sheet
             conn.update(spreadsheet=SHEET_URL, data=df_to_save)
 
-            # 4. Clear cache so changes reflect instantly
+            # 4. Also save locally if running on a local machine
+            df_to_save.to_excel(EXCEL_FILE, index=False)
+
+            # 5. Clear cache so changes reflect instantly
             st.cache_data.clear()
             st.success("Successfully updated and synced to your Google Sheet!")
             st.rerun()
