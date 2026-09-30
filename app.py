@@ -177,8 +177,8 @@ with tab1:
       for index, row in display_df.reset_index().iterrows():
         col_idx = index % num_cols
         with cols[col_idx]:
-          # Use fixed-height container with height=400 and border
-          with st.container(height=370, border=True):
+          
+          with st.container(height=300, border=True):
             img_url = row.get("image_url")
             if pd.notna(img_url) and str(img_url).startswith("http"):
               st.image(img_url, use_container_width=True)
