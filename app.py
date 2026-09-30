@@ -259,7 +259,17 @@ with tab3:
             key="dup_num",
         )
 
-        if st.button("Save Changes to Live Google Sheet"):
+if st.button("Save Changes to Live Google Sheet"):
+          current_owned_status = bool(selected_row["owned"])
+          current_dups = int(selected_row["duplicates"])
+
+          # Intelligent Duplicate Logic:
+          # If the user newly checks "owned", but they already owned it, bump duplicates up by +1!
+          if is_owned and current_owned_status:
+            num_dup = current_dups + 1
+          # Otherwise, respect whatever number they manually set or cleared in the number_input
+
+          # 1. Update dataframe value in memory
           df_master.loc[
               df_master["card_number"] == selected_row["card_number"], "owned"
           ] = is_owned
@@ -268,13 +278,23 @@ with tab3:
               "duplicates",
           ] = num_dup
 
+          # 2. Clean up temporary display column
           df_to_save = df_master.drop(columns=["display_label"])
 
           try:
+            # 3. Write changes back to the live Google Sheet via Apps Script or connection
             conn.update(spreadsheet=SHEET_URL, data=df_to_save)
             df_to_save.to_excel(EXCEL_FILE, index=False)
             st.cache_data.clear()
-            st.success("Successfully updated and synced to your Google Sheet!")
+
+            if is_owned and current_owned_status:
+              st.success(
+                  f"You already owned this card! Duplicate count increased to"
+                  f" {num_dup} and synced successfully."
+              )
+            else:
+              st.success("Successfully updated and synced to your Google Sheet!")
+
             st.rerun()
           except Exception as e:
             st.error(f"Failed to update sheet: {e}")
