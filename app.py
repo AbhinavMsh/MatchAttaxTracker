@@ -15,11 +15,19 @@ SHEET_URL = st.secrets["sheet_url"]
 @st.cache_data(ttl=60)
 def load_data_from_gsheets():
   try:
-    # Convert standard Google Sheet sharing link into a direct CSV export link
-    csv_url = SHEET_URL.replace("/edit?usp=sharing", "/export?format=csv")
-    df = pd.read_csv(csv_url)
+    # Extract the Sheet/File ID cleanly from your URL
+    file_id = SHEET_URL.split("/d/")[1].split("/")[0]
+    
+    # Use Google's direct download export endpoint for Excel files (.xlsx)
+    excel_url = f"https://docs.google.com/spreadsheets/d/{file_id}/export?format=xlsx"
 
-    # Ensure tracking columns exist if they aren't in the sheet yet
+    # Read directly using pandas Excel engine
+    df = pd.read_excel(excel_url)
+
+    if df.empty:
+      return pd.DataFrame()
+
+    # Ensure tracking columns exist
     if "owned" not in df.columns:
       df["owned"] = False
     if "duplicates" not in df.columns:
@@ -27,10 +35,9 @@ def load_data_from_gsheets():
     return df
   except Exception as e:
     st.error(
-        f"Failed to load Google Sheet. Check your sheet_url secret. Error: {e}"
+        f"Error loading Excel file from Google Drive. Make sure sharing is set to 'Anyone with the link can view'. Details: {e}"
     )
     return pd.DataFrame()
-
 
 df_master = load_data_from_gsheets()
 
